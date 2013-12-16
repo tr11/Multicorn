@@ -740,7 +740,6 @@ multicorn_subxact_callback(SubXactEvent event, SubTransactionId mySubid,
 	HASH_SEQ_STATUS status;
 	CacheEntry *entry;
 
-
 	/* Nothing to do after commit or subtransaction start. */
 	if (event == SUBXACT_EVENT_COMMIT_SUB || event == SUBXACT_EVENT_START_SUB)
 		return;
@@ -751,6 +750,9 @@ multicorn_subxact_callback(SubXactEvent event, SubTransactionId mySubid,
 
 	while ((entry = (CacheEntry *) hash_seq_search(&status)) != NULL)
 	{
+                if( entry->xact_depth < curlevel)
+                        continue;
+
 		instance = entry->value;
 
 		if (event == SUBXACT_EVENT_PRE_COMMIT_SUB)
