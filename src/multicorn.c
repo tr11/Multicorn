@@ -580,13 +580,18 @@ multicornBeginForeignModify(ModifyTableState *mtstate,
 	modstate->rowidAttno = ExecFindJunkAttributeInTlist(subplan->targetlist, modstate->rowidAttrName);
 	resultRelInfo->ri_FdwState = modstate;
 
+	/*
+	 * If the python call throws, the lock will be lost, so make sure the flag
+	 * is only set after the python call returns
+	 */
 	if (entry->write_lock_mode > -1)
 	{
 		LockRelation(rel, entry->write_lock_mode);
+		PyObject_CallMethod(entry->value, "begin_modify", NULL);
 		entry->acquired_write_lock = true;
 	}
-
-	PyObject_CallMethod(entry->value, "begin_modify", NULL);
+	else
+		PyObject_CallMethod(entry->value, "begin_modify", NULL);
 	errorCheck();
 	Py_DECREF(entry->value);
 }
