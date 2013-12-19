@@ -23,6 +23,7 @@
 #include "utils/memutils.h"
 #include "utils/rel.h"
 #include "parser/parsetree.h"
+#include "storage/lmgr.h"
 
 
 PG_MODULE_MAGIC;
@@ -259,6 +260,8 @@ multicornGetForeignRelSize(PlannerInfo *root,
 	}
 	/* Inject the "rows" and "width" attribute into the baserel */
 	getRelSize(planstate, root, &baserel->rows, &baserel->width);
+
+	Py_DECREF(planstate->fdw_instance);
 }
 
 /*
@@ -436,11 +439,10 @@ static void
 multicornEndForeignScan(ForeignScanState *node)
 {
 	MulticornExecState *state = node->fdw_state;
-	PyObject   *result = PyObject_CallMethod(state->fdw_instance, "end_scan", "()");
+	PyObject   *result = PyObject_CallMethod(state->fdw_instance, "end_scan", NULL);
 
 	errorCheck();
 	Py_DECREF(result);
-	Py_DECREF(state->fdw_instance);
 	if (state->p_iterator != NULL)
 	{
 		Py_DECREF(state->p_iterator);
@@ -468,6 +470,8 @@ multicornAddForeignUpdateTargets(Query *parsetree,
 	TupleDesc	desc = target_relation->rd_att;
 	int			i;
 	ListCell   *cell;
+
+	Py_DECREF(instance);
 
 	foreach(cell, parsetree->returningList)
 	{
@@ -505,7 +509,6 @@ multicornAddForeignUpdateTargets(Query *parsetree,
 						  strdup(attrname),
 						  true);
 	parsetree->targetList = lappend(parsetree->targetList, tle);
-	Py_DECREF(instance);
 }
 
 
@@ -543,11 +546,12 @@ multicornBeginForeignModify(ModifyTableState *mtstate,
 	Plan	   *subplan = ps->plan;
 	MemoryContext oldcontext;
 	int			i;
+	CacheEntry *entry = getCacheEntry(rel->rd_id);
 
 	modstate->cinfos = palloc0(sizeof(ConversionInfo *) *
 							   desc->natts);
 	modstate->buffer = makeStringInfo();
-	modstate->fdw_instance = getInstance(rel->rd_id);
+	modstate->fdw_instance = entry->value;
 	modstate->rowidAttrName = getRowIdColumn(modstate->fdw_instance);
 	initConversioninfo(modstate->cinfos, TupleDescGetAttInMetadata(desc));
 	oldcontext = MemoryContextSwitchTo(TopMemoryContext);
@@ -575,6 +579,16 @@ multicornBeginForeignModify(ModifyTableState *mtstate,
 	}
 	modstate->rowidAttno = ExecFindJunkAttributeInTlist(subplan->targetlist, modstate->rowidAttrName);
 	resultRelInfo->ri_FdwState = modstate;
+
+	if (entry->write_lock_mode > -1)
+	{
+		entry->acquired_write_lock = true;
+		LockRelation(rel, entry->write_lock_mode);
+	}
+
+	PyObject_CallMethod(entry->value, "begin_modify", NULL);
+	errorCheck();
+	Py_DECREF(entry->value);
 }
 
 /*
@@ -682,11 +696,8 @@ multicornEndForeignModify(EState *estate, ResultRelInfo *resultRelInfo)
 
 {
 	MulticornModifyState *modstate = resultRelInfo->ri_FdwState;
-	PyObject   *result = PyObject_CallMethod(modstate->fdw_instance, "end_modify", "()");
-
+	PyObject_CallMethod(modstate->fdw_instance, "end_modify", NULL);
 	errorCheck();
-	Py_DECREF(modstate->fdw_instance);
-	Py_DECREF(result);
 }
 
 /*
@@ -710,15 +721,25 @@ multicorn_xact_callback(XactEvent event, void *arg)
 		switch (event)
 		{
 			case XACT_EVENT_PRE_COMMIT:
-				PyObject_CallMethod(instance, "pre_commit", "()");
+				PyObject_CallMethod(instance, "pre_commit", NULL);
 				break;
 			case XACT_EVENT_COMMIT:
-				PyObject_CallMethod(instance, "commit", "()");
+				PyObject_CallMethod(instance, "commit", NULL);
 				entry->xact_depth = 0;
+				if (entry->write_lock_mode > -1)
+				{
+					UnlockRelationOid(entry->hashkey, entry->write_lock_mode);
+					entry->acquired_write_lock = false;
+				}
 				break;
 			case XACT_EVENT_ABORT:
-				PyObject_CallMethod(instance, "rollback", "()");
+				PyObject_CallMethod(instance, "rollback", NULL);
 				entry->xact_depth = 0;
+				if (entry->write_lock_mode > -1)
+				{
+					UnlockRelationOid(entry->hashkey, entry->write_lock_mode);
+					entry->acquired_write_lock = false;
+				}
 				break;
 			default:
 				break;
@@ -750,8 +771,8 @@ multicorn_subxact_callback(SubXactEvent event, SubTransactionId mySubid,
 
 	while ((entry = (CacheEntry *) hash_seq_search(&status)) != NULL)
 	{
-                if( entry->xact_depth < curlevel)
-                        continue;
+		if (entry->xact_depth < curlevel)
+			continue;
 
 		instance = entry->value;
 
@@ -807,5 +828,8 @@ initializeExecState(void *internalstate)
 	execstate->cinfos = palloc0(sizeof(ConversionInfo *) * attnum);
 	execstate->values = palloc(attnum * sizeof(Datum));
 	execstate->nulls = palloc(attnum * sizeof(bool));
+
+	Py_DECREF(execstate->fdw_instance);
+
 	return execstate;
 }

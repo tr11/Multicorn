@@ -23,14 +23,16 @@
 
 typedef struct CacheEntry
 {
-        Oid                     hashkey;
-        PyObject   *value;
-        List       *options;
-        List       *columns;
-        int        xact_depth;
-        /* Keep the "options" and "columns" in a specific context to avoid leaks. */
-        MemoryContext cacheContext;
-}       CacheEntry;
+	Oid			hashkey;
+	PyObject   *value;
+	List	   *options;
+	List	   *columns;
+	int			xact_depth;
+	bool		acquired_write_lock;
+	LOCKMODE	write_lock_mode;
+	/* Keep the "options" and "columns" in a specific context to avoid leaks. */
+	MemoryContext cacheContext;
+}	CacheEntry;
 
 
 typedef struct ConversionInfo
@@ -101,7 +103,7 @@ typedef struct MulticornConstQual
 {
 	MulticornBaseQual base;
 	Datum		value;
-    bool isnull;
+	bool		isnull;
 }	MulticornConstQual;
 
 typedef struct MulticornVarQual
@@ -141,7 +143,7 @@ void getRelSize(MulticornPlanState * state,
 
 List	   *pathKeys(MulticornPlanState * state);
 
-CacheEntry * getCacheEntry(Oid foreigntableid);
+CacheEntry *getCacheEntry(Oid foreigntableid);
 
 /* Hash table mapping oid to fdw instances */
 extern PGDLLIMPORT HTAB *InstancesHash;

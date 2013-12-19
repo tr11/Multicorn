@@ -162,6 +162,9 @@ class ForeignDataWrapper(object):
     def end_scan(self):
         pass
 
+    def begin_modify(self):
+        pass
+
     def end_modify(self):
         pass
 

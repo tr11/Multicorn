@@ -27,6 +27,8 @@ bool		compareOptions(List *options1, List *options2);
 void		getColumnsFromTable(TupleDesc desc, PyObject **p_columns, List **columns);
 bool		compareColumns(List *columns1, List *columns2);
 
+int			getLockMode(char *option, List *options);
+
 PyObject   *getClass(PyObject *className);
 PyObject   *valuesToPySet(List *targetlist);
 PyObject   *qualDefsToPyList(List *quallist, ConversionInfo ** cinfo);
@@ -405,6 +407,33 @@ optionsListToPyDict(List *options)
 	return p_options_dict;
 }
 
+int
+getLockMode(char *option, List *options)
+{
+	ListCell   *lc;
+
+	foreach(lc, options)
+	{
+		DefElem    *def = (DefElem *) lfirst(lc);
+
+		/* check for the right option */
+		if (def != NULL && strcmp(def->defname, option) == 0)
+		{
+			if (!strcmp(defGetString(def), "ExclusiveLock"))
+				return ExclusiveLock;
+			if (!strcmp(defGetString(def), "AccessExclusiveLock"))
+				return AccessExclusiveLock;
+			if (!strcmp(defGetString(def), "ShareRowExclusiveLock"))
+				return ShareRowExclusiveLock;
+			if (!strcmp(defGetString(def), "ShareLock"))
+				return ShareLock;
+			elog(WARNING, "Unknown lock mode '%s'", defGetString(def));
+		}
+	}
+	return -1;
+}
+
+
 bool
 compareOptions(List *options1, List *options2)
 {
@@ -583,6 +612,8 @@ getCacheEntry(Oid foreigntableid)
 		entry->columns = NULL;
 		entry->cacheContext = NULL;
 		entry->xact_depth = 0;
+		entry->acquired_write_lock = false;
+		entry->write_lock_mode = -1;
 		needInitialization = true;
 	}
 	else
@@ -631,6 +662,8 @@ getCacheEntry(Oid foreigntableid)
 		entry->options = options;
 		entry->columns = columns;
 		entry->xact_depth = 0;
+		entry->acquired_write_lock = false;
+		entry->write_lock_mode = getLockMode("write_lock_mode", options);
 		Py_DECREF(p_class);
 		Py_DECREF(p_options);
 		Py_DECREF(p_columns);
