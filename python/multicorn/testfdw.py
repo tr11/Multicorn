@@ -134,3 +134,9 @@ class TestForeignDataWrapper(ForeignDataWrapper):
 
     def rollback(self):
         log_to_postgres('ROLLBACK')
+
+    def begin_modify(self):
+        log_to_postgres('BEGIN MODIFY')
+
+    def end_modify(self):
+        log_to_postgres('END MODIFY')

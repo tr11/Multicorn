@@ -24,16 +24,24 @@ insert into testmulticorn_write(test1, test2) VALUES ('0', 'A');
 NOTICE:  [('option1', 'option1'), ('row_id_column', 'test1'), ('test_type', 'returning'), ('usermapping', 'test')]
 NOTICE:  [('test1', 'character varying'), ('test2', 'character varying')]
 NOTICE:  BEGIN
+NOTICE:  BEGIN MODIFY
 NOTICE:  INSERTING: [('test1', u'0'), ('test2', u'A')]
+NOTICE:  END MODIFY
 update testmulticorn_write set test2 = 'B' where test1 = '0';
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 0]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 update testmulticorn_write set test2 = 'C' where test1 = '1';
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 1]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 delete from testmulticorn_write where test1 = '1';
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 1]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 DROP foreign table testmulticorn_write;
 ROLLBACK;
 NOTICE:  ROLLBACK
@@ -53,16 +61,24 @@ NOTICE:  [('option1', 'option1'), ('row_id_column', 'test1'), ('test_type', 'ret
 NOTICE:  [('test1', 'character varying'), ('test2', 'character varying')]
 NOTICE:  BEGIN
 NOTICE:  SUBBEGIN
+NOTICE:  BEGIN MODIFY
 NOTICE:  INSERTING: [('test1', u'0'), ('test2', u'A')]
+NOTICE:  END MODIFY
 update testmulticorn_write set test2 = 'B' where test1 = '0';
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 0]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 update testmulticorn_write set test2 = 'C' where test1 = '1';
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 1]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 delete from testmulticorn_write where test1 = '1';
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 1]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 ROLLBACK TO A;
 NOTICE:  SUBROLLBACK
 RELEASE A;
@@ -86,7 +102,9 @@ NOTICE:  [('option1', 'option1'), ('row_id_column', 'test1'), ('test_type', 'ret
 NOTICE:  [('test1', 'character varying'), ('test2', 'character varying')]
 NOTICE:  BEGIN
 NOTICE:  SUBBEGIN
+NOTICE:  BEGIN MODIFY
 NOTICE:  INSERTING: [('test1', u'0'), ('test2', u'A')]
+NOTICE:  END MODIFY
 select * from testmulticorn LIMIT 1;
 NOTICE:  [('option1', 'option1'), ('test_type', 'nowrite'), ('usermapping', 'test')]
 NOTICE:  [('test1', 'character varying'), ('test2', 'character varying')]
@@ -106,16 +124,22 @@ RELEASE A;
 SAVEPOINT B;
 update testmulticorn_write set test2 = 'B' where test1 = '0';
 NOTICE:  SUBBEGIN
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 0]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 RELEASE B;
 NOTICE:  SUBCOMMIT
 update testmulticorn_write set test2 = 'C' where test1 = '1';
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 1]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 delete from testmulticorn_write where test1 = '1';
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 1]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 DROP foreign table testmulticorn_write;
 ROLLBACK;
 NOTICE:  ROLLBACK
@@ -136,7 +160,9 @@ NOTICE:  [('option1', 'option1'), ('row_id_column', 'test1'), ('test_type', 'ret
 NOTICE:  [('test1', 'character varying'), ('test2', 'character varying')]
 NOTICE:  BEGIN
 NOTICE:  SUBBEGIN
+NOTICE:  BEGIN MODIFY
 NOTICE:  INSERTING: [('test1', u'0'), ('test2', u'A')]
+NOTICE:  END MODIFY
 select * from testmulticorn LIMIT 1;
 NOTICE:  BEGIN
 NOTICE:  SUBBEGIN
@@ -150,16 +176,22 @@ NOTICE:  ['test1', 'test2']
 SAVEPOINT B;
 update testmulticorn_write set test2 = 'B' where test1 = '0';
 NOTICE:  SUBBEGIN
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 0]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 RELEASE B;
 NOTICE:  SUBCOMMIT
 update testmulticorn_write set test2 = 'C' where test1 = '1';
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 1]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 delete from testmulticorn_write where test1 = '1';
+NOTICE:  BEGIN MODIFY
 NOTICE:  [test1 = 1]
 NOTICE:  ['test1']
+NOTICE:  END MODIFY
 ROLLBACK TO A;
 NOTICE:  SUBROLLBACK
 NOTICE:  SUBROLLBACK
