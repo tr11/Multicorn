@@ -582,8 +582,8 @@ multicornBeginForeignModify(ModifyTableState *mtstate,
 
 	if (entry->write_lock_mode > -1)
 	{
-		entry->acquired_write_lock = true;
 		LockRelation(rel, entry->write_lock_mode);
+		entry->acquired_write_lock = true;
 	}
 
 	PyObject_CallMethod(entry->value, "begin_modify", NULL);
@@ -696,6 +696,7 @@ multicornEndForeignModify(EState *estate, ResultRelInfo *resultRelInfo)
 
 {
 	MulticornModifyState *modstate = resultRelInfo->ri_FdwState;
+
 	PyObject_CallMethod(modstate->fdw_instance, "end_modify", NULL);
 	errorCheck();
 }
@@ -726,7 +727,7 @@ multicorn_xact_callback(XactEvent event, void *arg)
 			case XACT_EVENT_COMMIT:
 				PyObject_CallMethod(instance, "commit", NULL);
 				entry->xact_depth = 0;
-				if (entry->write_lock_mode > -1)
+				if (entry->write_lock_mode > -1 && entry->acquired_write_lock)
 				{
 					UnlockRelationOid(entry->hashkey, entry->write_lock_mode);
 					entry->acquired_write_lock = false;
@@ -735,7 +736,7 @@ multicorn_xact_callback(XactEvent event, void *arg)
 			case XACT_EVENT_ABORT:
 				PyObject_CallMethod(instance, "rollback", NULL);
 				entry->xact_depth = 0;
-				if (entry->write_lock_mode > -1)
+				if (entry->write_lock_mode > -1 && entry->acquired_write_lock)
 				{
 					UnlockRelationOid(entry->hashkey, entry->write_lock_mode);
 					entry->acquired_write_lock = false;
