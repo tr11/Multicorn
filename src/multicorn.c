@@ -95,6 +95,11 @@ typedef struct MulticornCallbackData
 {
 	Oid			foreigntableid;
 }	MulticornCallbackData;
+
+/*
+ * List of modified relations
+ */
+static List *multicorn_modified_relations = NULL;
 #endif
 
 /*	Helpers functions */
@@ -112,8 +117,11 @@ _PG_init()
 	MemoryContext oldctx = MemoryContextSwitchTo(CacheMemoryContext);
 
 	Py_Initialize();
+#if PG_VERSION_NUM >= 90300
+	multicorn_modified_relations = NULL;
 	RegisterXactCallback(multicorn_xact_callback, NULL);
 	RegisterSubXactCallback(multicorn_subxact_callback, NULL);
+#endif
 	/* Initialize the global oid -> python instances hash */
 	MemSet(&ctl, 0, sizeof(ctl));
 	ctl.keysize = sizeof(Oid);

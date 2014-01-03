@@ -481,6 +481,17 @@ NOTICE:  ['test1', 'test2']
 
 NOTICE:  PRECOMMIT
 NOTICE:  COMMIT
+select * from testmulticorn where test1 = 0;
+NOTICE:  BEGIN
+NOTICE:  [test1 = 0]
+NOTICE:  ['test1', 'test2']
+ test1 | test2 
+-------+-------
+     0 | 0
+(1 row)
+
+NOTICE:  PRECOMMIT
+NOTICE:  COMMIT
 ALTER FOREIGN TABLE testmulticorn options (drop test_type);
 -- Test operations with bytea
 ALTER FOREIGN TABLE testmulticorn alter test2 type bytea;
@@ -521,6 +532,29 @@ NOTICE:  []
 NOTICE:  ['test1', 'test2']
  test1 | test2 
 -------+-------
+(0 rows)
+
+NOTICE:  PRECOMMIT
+NOTICE:  COMMIT
+ALTER FOREIGN TABLE testmulticorn add test3 money;
+SELECT * from testmulticorn where test3 = 12::money;
+NOTICE:  [('option1', 'option1'), ('test_type', 'iter_none'), ('usermapping', 'test')]
+NOTICE:  [('test1', 'bytea'), ('test2', 'bytea'), ('test3', 'money')]
+NOTICE:  BEGIN
+NOTICE:  [test3 = $12.00]
+NOTICE:  ['test1', 'test2', 'test3']
+ test1 | test2 | test3 
+-------+-------+-------
+(0 rows)
+
+NOTICE:  PRECOMMIT
+NOTICE:  COMMIT
+SELECT * from testmulticorn where test1 = '12 €';
+NOTICE:  BEGIN
+NOTICE:  [test1 = b'12 \xe2\x82\xac']
+NOTICE:  ['test1', 'test2', 'test3']
+ test1 | test2 | test3 
+-------+-------+-------
 (0 rows)
 
 NOTICE:  PRECOMMIT
