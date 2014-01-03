@@ -267,6 +267,8 @@ multicornGetForeignRelSize(PlannerInfo *root,
 	}
 	/* Inject the "rows" and "width" attribute into the baserel */
 	getRelSize(planstate, root, &baserel->rows, &baserel->width);
+
+	Py_DECREF(planstate->fdw_instance);
 }
 
 /*
@@ -448,7 +450,6 @@ multicornEndForeignScan(ForeignScanState *node)
 
 	errorCheck();
 	Py_DECREF(result);
-	Py_DECREF(state->fdw_instance);
 	if (state->p_iterator != NULL)
 	{
 		Py_DECREF(state->p_iterator);
@@ -476,6 +477,8 @@ multicornAddForeignUpdateTargets(Query *parsetree,
 	TupleDesc	desc = target_relation->rd_att;
 	int			i;
 	ListCell   *cell;
+
+	Py_DECREF(instance);
 
 	foreach(cell, parsetree->returningList)
 	{
@@ -513,7 +516,7 @@ multicornAddForeignUpdateTargets(Query *parsetree,
 						  strdup(attrname),
 						  true);
 	parsetree->targetList = lappend(parsetree->targetList, tle);
-	Py_DECREF(instance);
+/*		Py_DECREF(instance); */
 }
 
 
@@ -815,5 +818,8 @@ initializeExecState(void *internalstate)
 	execstate->cinfos = palloc0(sizeof(ConversionInfo *) * attnum);
 	execstate->values = palloc(attnum * sizeof(Datum));
 	execstate->nulls = palloc(attnum * sizeof(bool));
+
+	Py_DECREF(execstate->fdw_instance);
+
 	return execstate;
 }
